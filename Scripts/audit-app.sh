@@ -39,6 +39,13 @@ if otool -L "$EXECUTABLE" "$FRAMEWORKS/"*.dylib | \
     exit 1
 fi
 
+for binary in "$EXECUTABLE" "$FRAMEWORKS/"*.dylib; do
+    if grep -aE '/Users/[^/[:cntrl:]]+' "$binary" >/dev/null; then
+        echo "A developer home-directory path remains embedded in $(basename "$binary")." >&2
+        exit 1
+    fi
+done
+
 codesign --verify --deep --strict "$APP_PATH"
 codesign -d --entitlements :- "$APP_PATH" 2>/dev/null | \
     grep -q 'com.apple.security.cs.disable-library-validation' || {

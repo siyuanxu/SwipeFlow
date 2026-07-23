@@ -175,7 +175,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nruntime_dir=\"$PROJECT_DIR/.build/NativeRuntime/package/lib\"\nframeworks_dir=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nif [ ! -f \"$runtime_dir/libmpv.2.dylib\" ]; then\n    echo \"error: Native runtime is missing. Run Scripts/NativeRuntime/build.sh first.\" >&2\n    exit 1\nfi\nmkdir -p \"$frameworks_dir\"\nidentity=\"${EXPANDED_CODE_SIGN_IDENTITY:--}\"\nfor runtime_library in \"$runtime_dir\"/lib*.*.dylib; do\n    destination=\"$frameworks_dir/$(basename \"$runtime_library\")\"\n    cp -f \"$runtime_library\" \"$destination\"\n    /usr/bin/codesign --force --sign \"$identity\" --timestamp=none \"$destination\"\ndone\n";
+			shellScript = "set -eu\nruntime_package=\"${SWIPEFLOW_RUNTIME_PACKAGE_DIR:-$PROJECT_DIR/.build/NativeRuntime/package}\"\nruntime_dir=\"$runtime_package/lib\"\nframeworks_dir=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nif [ ! -f \"$runtime_dir/libmpv.2.dylib\" ]; then\n    echo \"error: Native runtime is missing. Run Scripts/NativeRuntime/build.sh first.\" >&2\n    exit 1\nfi\nmkdir -p \"$frameworks_dir\"\nidentity=\"${EXPANDED_CODE_SIGN_IDENTITY:--}\"\nfor runtime_library in \"$runtime_dir\"/lib*.*.dylib; do\n    destination=\"$frameworks_dir/$(basename \"$runtime_library\")\"\n    cp -f \"$runtime_library\" \"$destination\"\n    /usr/bin/codesign --force --sign \"$identity\" --timestamp=none \"$destination\"\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

@@ -49,6 +49,9 @@ for name in "${expected[@]}"; do
             [[ -f "$LIB_DIR/$bundled" ]] || fail "$name references missing $bundled"
         fi
     done < <(otool -L "$library" | tail -n +2 | awk '{print $1}')
+    if grep -aE '/Users/[^/[:cntrl:]]+' "$library" >/dev/null; then
+        fail "$name contains a developer home-directory path"
+    fi
 done
 
 if otool -L "$LIB_DIR/"*.dylib | awk '/^\t/{print $1}' | \

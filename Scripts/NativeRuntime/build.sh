@@ -29,6 +29,8 @@ for tool in curl shasum tar meson ninja pkg-config make xcrun; do
     fi
 done
 
+MACOS_SDK="$(xcrun --sdk macosx --show-sdk-path)"
+
 mkdir -p "$DOWNLOAD_DIR" "$SOURCE_DIR" "$BUILD_DIR" "$PREFIX_DIR" "$METADATA_DIR"
 
 download() {
@@ -102,9 +104,10 @@ extract "$FAST_FLOAT_ARCHIVE" "$LIBPLACEBO_SOURCE/3rdparty/fast_float"
 
 COMMON_ENV=(
     "MACOSX_DEPLOYMENT_TARGET=$DEPLOYMENT_TARGET"
-    "CFLAGS=-I$PREFIX_DIR/include -mmacosx-version-min=$DEPLOYMENT_TARGET"
-    "CXXFLAGS=-I$PREFIX_DIR/include -mmacosx-version-min=$DEPLOYMENT_TARGET"
-    "LDFLAGS=-L$PREFIX_DIR/lib -mmacosx-version-min=$DEPLOYMENT_TARGET"
+    "SDKROOT=$MACOS_SDK"
+    "CFLAGS=-I$PREFIX_DIR/include -isysroot $MACOS_SDK -mmacosx-version-min=$DEPLOYMENT_TARGET"
+    "CXXFLAGS=-I$PREFIX_DIR/include -isysroot $MACOS_SDK -mmacosx-version-min=$DEPLOYMENT_TARGET"
+    "LDFLAGS=-L$PREFIX_DIR/lib -isysroot $MACOS_SDK -mmacosx-version-min=$DEPLOYMENT_TARGET"
     "PKG_CONFIG_PATH=$PREFIX_DIR/lib/pkgconfig"
     "PKG_CONFIG_LIBDIR=$PREFIX_DIR/lib/pkgconfig"
 )
@@ -208,12 +211,12 @@ if [[ ! -f "$PREFIX_DIR/lib/libavcodec.62.dylib" ]]; then
             --disable-debug --disable-autodetect --enable-network \
             --enable-pthreads --enable-audiotoolbox --enable-videotoolbox \
             --enable-securetransport --enable-pic \
-            --extra-cflags="-mmacosx-version-min=$DEPLOYMENT_TARGET" \
-            --extra-ldflags="-mmacosx-version-min=$DEPLOYMENT_TARGET"
+            --extra-cflags="-isysroot $MACOS_SDK -mmacosx-version-min=$DEPLOYMENT_TARGET" \
+            --extra-ldflags="-isysroot $MACOS_SDK -mmacosx-version-min=$DEPLOYMENT_TARGET"
         make -j "$JOBS"
         make install
         cp config.h "$METADATA_DIR/ffmpeg-config.h"
-        cp config.mak "$METADATA_DIR/ffmpeg-config.mak"
+        cp ffbuild/config.mak "$METADATA_DIR/ffmpeg-config.mak"
     )
 fi
 
@@ -237,6 +240,10 @@ fi
 if [[ ! -f "$METADATA_DIR/ffmpeg-config.h" ]]; then
     ffmpeg_config="$(find "$NATIVE_DIR" -path '*/ffmpeg*/config.h' -type f -print | tail -1)"
     [[ -n "$ffmpeg_config" ]] && cp "$ffmpeg_config" "$METADATA_DIR/ffmpeg-config.h"
+fi
+if [[ ! -f "$METADATA_DIR/ffmpeg-config.mak" ]]; then
+    ffmpeg_config_mak="$(find "$NATIVE_DIR" -path '*/ffmpeg*/ffbuild/config.mak' -type f -print | tail -1)"
+    [[ -n "$ffmpeg_config_mak" ]] && cp "$ffmpeg_config_mak" "$METADATA_DIR/ffmpeg-config.mak"
 fi
 if [[ ! -f "$METADATA_DIR/mpv-build-options.txt" ]]; then
     mpv_build="$(find "$NATIVE_DIR" -path '*/mpv*/meson-private/coredata.dat' -type f -print | tail -1 | xargs -I{} dirname "{}" | xargs -I{} dirname "{}")"
