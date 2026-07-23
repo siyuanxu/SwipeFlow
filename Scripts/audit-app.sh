@@ -7,6 +7,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_PATH="${1:-$REPO_ROOT/.build/XcodeDerivedData/Build/Products/Release/SwipeFlow.app}"
 EXECUTABLE="$APP_PATH/Contents/MacOS/SwipeFlow"
 FRAMEWORKS="$APP_PATH/Contents/Frameworks"
+RESOURCES="$APP_PATH/Contents/Resources"
+NOTICES="$RESOURCES/NativeRuntime"
 
 expected=(
     libmpv.2.dylib libass.9.dylib libavcodec.62.dylib
@@ -23,6 +25,20 @@ done
 embedded_count="$(find "$FRAMEWORKS" -maxdepth 1 -type f -name '*.dylib' | wc -l | tr -d ' ')"
 [[ "$embedded_count" == "${#expected[@]}" ]] || {
     echo "Expected ${#expected[@]} embedded dylibs, found $embedded_count." >&2
+    exit 1
+}
+
+[[ -f "$RESOURCES/Licenses/SwipeFlow-MIT.txt" ]] || {
+    echo "Missing SwipeFlow MIT license." >&2
+    exit 1
+}
+[[ -f "$NOTICES/README.md" && -f "$NOTICES/SOURCE_MANIFEST.sha256" ]] || {
+    echo "Missing native runtime source or replacement notice." >&2
+    exit 1
+}
+runtime_license_count="$(find "$NOTICES/Licenses" -type f | wc -l | tr -d ' ')"
+[[ "$runtime_license_count" -ge 12 ]] || {
+    echo "Expected native runtime license notices, found $runtime_license_count." >&2
     exit 1
 }
 
@@ -52,4 +68,4 @@ codesign -d --entitlements :- "$APP_PATH" 2>/dev/null | \
         echo "Ad-hoc app is missing its library-validation entitlement." >&2
         exit 1
     }
-echo "SwipeFlow app audit passed: 12 embedded dylibs, relative runtime graph, valid signature."
+echo "SwipeFlow app audit passed: 12 embedded dylibs, licenses, relative runtime graph, valid signature."
