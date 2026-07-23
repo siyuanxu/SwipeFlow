@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="background" x1="0%" y1="0%" x2="82%" y2="100%">
+      <stop offset="0" stop-color="#24124F"/>
+      <stop offset="0.48" stop-color="#2853E3"/>
+      <stop offset="1" stop-color="#16B7E8"/>
+    </linearGradient>
+  </defs>
+
+  <g>
+    <rect x="72" y="58" width="880" height="880" rx="202" fill="url(#background)"/>
+    <rect x="76" y="62" width="872" height="872" rx="198"
+      fill="none" stroke="#FFFFFF" stroke-opacity="0.13" stroke-width="8"/>
+  </g>
+
+  <!-- The S-shaped swipe trail joins a right-pointing playback cue. -->
+  <path
+    d="M 624 300
+       C 410 270, 368 394, 500 466
+       C 632 538, 610 688, 394 724"
+    fill="none"
+    stroke="#FFFFFF"
+    stroke-width="82"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+  <polygon points="510,423 510,601 674,512" fill="#FFFFFF"/>
+</svg>

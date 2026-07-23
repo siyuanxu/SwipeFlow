@@ -1,0 +1,41 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+*.log
+*.xcuserstate
+xcuserdata/
+*.xccheckout
+*.xcscmblueprint
+
+# Local editor state
+.idea/
+.vscode/
+
+# Local configuration and credentials
+.env
+.env.*
+*.env
+!Scripts/NativeRuntime/versions.env
+*.local
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+*.crt
+*.mobileprovision
+*.har
+secrets/
+
+# Media and STRM files can contain private library names or signed URLs.
+*.strm
+*.mp4
+*.m4v
+*.mkv
+*.mov
+*.avi
+*.webm
+*.ts
+
+build/

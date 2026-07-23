@@ -1,0 +1,352 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000001 /* SwipeFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000011 /* SwipeFlowApp.swift */; };
+		000000000000000000000002 /* SourceBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000012 /* SourceBrowserView.swift */; };
+		000000000000000000000003 /* VerticalFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000013 /* VerticalFeedView.swift */; };
+		000000000000000000000004 /* SwipeFlowCore in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000072 /* SwipeFlowCore */; };
+		000000000000000000000005 /* SwipeFlowConnectors in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000073 /* SwipeFlowConnectors */; };
+		000000000000000000000006 /* SwipeFlowMPV in Frameworks */ = {isa = PBXBuildFile; productRef = 000000000000000000000075 /* SwipeFlowMPV */; };
+		000000000000000000000007 /* VidpickConnectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000016 /* VidpickConnectionStore.swift */; };
+		000000000000000000000008 /* VidpickConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000017 /* VidpickConnectionView.swift */; };
+		000000000000000000000009 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000018 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		000000000000000000000011 /* SwipeFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeFlowApp.swift; sourceTree = "<group>"; };
+		000000000000000000000012 /* SourceBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceBrowserView.swift; sourceTree = "<group>"; };
+		000000000000000000000013 /* VerticalFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerticalFeedView.swift; sourceTree = "<group>"; };
+		000000000000000000000014 /* SwipeFlow.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SwipeFlow.entitlements; sourceTree = "<group>"; };
+		000000000000000000000015 /* SwipeFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SwipeFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000016 /* VidpickConnectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VidpickConnectionStore.swift; sourceTree = "<group>"; };
+		000000000000000000000017 /* VidpickConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VidpickConnectionView.swift; sourceTree = "<group>"; };
+		000000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000032 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000004 /* SwipeFlowCore in Frameworks */,
+				000000000000000000000005 /* SwipeFlowConnectors in Frameworks */,
+				000000000000000000000006 /* SwipeFlowMPV in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000021 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000022 /* SwipeFlowApp */,
+				000000000000000000000023 /* Configuration */,
+				000000000000000000000024 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000022 /* SwipeFlowApp */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000011 /* SwipeFlowApp.swift */,
+				000000000000000000000012 /* SourceBrowserView.swift */,
+				000000000000000000000013 /* VerticalFeedView.swift */,
+				000000000000000000000016 /* VidpickConnectionStore.swift */,
+				000000000000000000000017 /* VidpickConnectionView.swift */,
+			);
+			path = Sources/SwipeFlowApp;
+			sourceTree = "<group>";
+		};
+		000000000000000000000023 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000014 /* SwipeFlow.entitlements */,
+				000000000000000000000018 /* Assets.xcassets */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		000000000000000000000024 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000015 /* SwipeFlow.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000041 /* SwipeFlow */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 000000000000000000000061 /* Build configuration list for PBXNativeTarget "SwipeFlow" */;
+			buildPhases = (
+				000000000000000000000031 /* Sources */,
+				000000000000000000000032 /* Frameworks */,
+				000000000000000000000034 /* Embed Native Runtime */,
+				000000000000000000000033 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SwipeFlow;
+			packageProductDependencies = (
+				000000000000000000000072 /* SwipeFlowCore */,
+				000000000000000000000073 /* SwipeFlowConnectors */,
+				000000000000000000000075 /* SwipeFlowMPV */,
+			);
+			productName = SwipeFlow;
+			productReference = 000000000000000000000015 /* SwipeFlow.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000042 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					000000000000000000000041 = {
+						CreatedOnToolsVersion = 26.6;
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000000000062 /* Build configuration list for PBXProject "SwipeFlow" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000021;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				000000000000000000000071 /* XCLocalSwiftPackageReference "." */,
+				000000000000000000000074 /* XCLocalSwiftPackageReference "NativePlayback" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 000000000000000000000024 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000041 /* SwipeFlow */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000033 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000009 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		000000000000000000000034 /* Embed Native Runtime */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Native Runtime";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -eu\nruntime_dir=\"$PROJECT_DIR/.build/NativeRuntime/package/lib\"\nframeworks_dir=\"$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH\"\nif [ ! -f \"$runtime_dir/libmpv.2.dylib\" ]; then\n    echo \"error: Native runtime is missing. Run Scripts/NativeRuntime/build.sh first.\" >&2\n    exit 1\nfi\nmkdir -p \"$frameworks_dir\"\nidentity=\"${EXPANDED_CODE_SIGN_IDENTITY:--}\"\nfor runtime_library in \"$runtime_dir\"/lib*.*.dylib; do\n    destination=\"$frameworks_dir/$(basename \"$runtime_library\")\"\n    cp -f \"$runtime_library\" \"$destination\"\n    /usr/bin/codesign --force --sign \"$identity\" --timestamp=none \"$destination\"\ndone\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000031 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000001 /* SwipeFlowApp.swift in Sources */,
+				000000000000000000000002 /* SourceBrowserView.swift in Sources */,
+				000000000000000000000003 /* VerticalFeedView.swift in Sources */,
+				000000000000000000000007 /* VidpickConnectionStore.swift in Sources */,
+				000000000000000000000008 /* VidpickConnectionView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		000000000000000000000051 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/SwipeFlow.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "SwipeFlow Debug";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_LSApplicationSupportsSecureRestorableState = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.swipeflow.player.debug;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		000000000000000000000052 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/SwipeFlow.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 2;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = SwipeFlow;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.video";
+				INFOPLIST_KEY_LSApplicationSupportsSecureRestorableState = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.swipeflow.player;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		000000000000000000000053 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		000000000000000000000054 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000061 /* Build configuration list for PBXNativeTarget "SwipeFlow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000051 /* Debug */,
+				000000000000000000000052 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		000000000000000000000062 /* Build configuration list for PBXProject "SwipeFlow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				000000000000000000000053 /* Debug */,
+				000000000000000000000054 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		000000000000000000000071 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+		000000000000000000000074 /* XCLocalSwiftPackageReference "NativePlayback" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = NativePlayback;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		000000000000000000000072 /* SwipeFlowCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000071 /* XCLocalSwiftPackageReference "." */;
+			productName = SwipeFlowCore;
+		};
+		000000000000000000000073 /* SwipeFlowConnectors */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000071 /* XCLocalSwiftPackageReference "." */;
+			productName = SwipeFlowConnectors;
+		};
+		000000000000000000000075 /* SwipeFlowMPV */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 000000000000000000000074 /* XCLocalSwiftPackageReference "NativePlayback" */;
+			productName = SwipeFlowMPV;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 000000000000000000000042 /* Project object */;
+}
