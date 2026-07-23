@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import SwipeFlowCore
 import SwipeFlowMPV
@@ -5,9 +6,16 @@ import SwipeFlowMPV
 @MainActor
 private final class FeedPlaybackCoordinator: ObservableObject {
     @Published private var revision = 0
+    @Published private(set) var isMuted = true
 
     private lazy var pool = PlaybackPool(
-        buildEngine: { try MPVPlaybackEngine() },
+        buildEngine: { [weak self] in
+            try MPVPlaybackEngine(
+                defaultAudioDeviceDidChange: { [weak self] in
+                    self?.setMuted(true)
+                }
+            )
+        },
         didChange: { [weak self] in
             self?.revision &+= 1
         }
@@ -19,6 +27,7 @@ private final class FeedPlaybackCoordinator: ObservableObject {
         resolve: @escaping PlaybackPool.ResourceResolver
     ) async {
         await pool.focus(on: index, items: items, resolve: resolve)
+        applyMuteState()
     }
 
     func engine(for reference: MediaReference) -> MPVPlaybackEngine? {
@@ -29,6 +38,17 @@ private final class FeedPlaybackCoordinator: ObservableObject {
     func failure(for reference: MediaReference) -> PlaybackPreparationFailure? {
         _ = revision
         return pool.failures[reference]
+    }
+
+    func setMuted(_ muted: Bool) {
+        isMuted = muted
+        applyMuteState()
+    }
+
+    private func applyMuteState() {
+        for reference in pool.activeReferences {
+            (pool.engine(for: reference) as? MPVPlaybackEngine)?.setMuted(isMuted)
+        }
     }
 }
 
@@ -41,6 +61,9 @@ struct VerticalFeedView: View {
 
     @State private var focusedID: MediaReference?
     @State private var retryRevision = 0
+    @State private var acceleratedEngine: MPVPlaybackEngine?
+    @State private var isTemporarilyAccelerated = false
+    @State private var keyboardMonitorToken = UUID()
     @StateObject private var playback = FeedPlaybackCoordinator()
 
     var body: some View {
@@ -54,11 +77,12 @@ struct VerticalFeedView: View {
                         preparationFailure: playback.failure(for: item.reference),
                         retention: retentionByReference[item.reference],
                         isFavorite: favoriteReferences.contains(item.reference),
+                        isMuted: playback.isMuted,
+                        isTemporarilyAccelerated: isTemporarilyAccelerated,
+                        setMuted: playback.setMuted,
                         review: { choice in
                             Task {
-                                if await review(choice, item) {
-                                    moveFocus(by: 1)
-                                }
+                                _ = await review(choice, item)
                             }
                         },
                         retry: { retryRevision &+= 1 }
@@ -70,9 +94,23 @@ struct VerticalFeedView: View {
             .scrollTargetLayout()
         }
         .scrollIndicators(.hidden)
-        .scrollTargetBehavior(.paging)
-        .scrollPosition(id: $focusedID)
+        .scrollTargetBehavior(.viewAligned)
+        .scrollPosition(id: $focusedID, anchor: .top)
         .background(.black)
+        .background {
+            // AppKit key equivalents are resolved before an unhandled arrow
+            // reaches the responder chain. The active monitor normally
+            // consumes every right-arrow event; this inert shortcut is a
+            // final safety net for a leaked auto-repeat event, preventing the
+            // system alert sound without performing another seek.
+            Button(action: {}) {
+                Color.clear
+                    .frame(width: 1, height: 1)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.rightArrow, modifiers: [])
+            .accessibilityHidden(true)
+        }
         .overlay(alignment: .trailing) {
             VStack(spacing: 0) {
                 Button {
@@ -112,12 +150,25 @@ struct VerticalFeedView: View {
             if focusedID == nil {
                 focusedID = items.first?.reference
             }
+            FeedKeyboardMonitor.shared.activate(
+                token: keyboardMonitorToken,
+                shortRightArrowPress: seekForwardFivePercent,
+                longRightArrowPressChanged: setTemporaryAcceleration,
+                togglePlayback: toggleFocusedPlayback
+            )
         }
         .onChange(of: items.map(\.reference)) { _, references in
             if let focusedID, references.contains(focusedID) {
                 return
             }
             focusedID = references.first
+        }
+        .onChange(of: focusedID) {
+            restoreNormalPlaybackRate()
+        }
+        .onDisappear {
+            FeedKeyboardMonitor.shared.deactivate(token: keyboardMonitorToken)
+            restoreNormalPlaybackRate()
         }
         .task(
             id: FocusRequest(
@@ -152,6 +203,188 @@ struct VerticalFeedView: View {
             focusedID = items[destination].reference
         }
     }
+
+    private func seekForwardFivePercent() {
+        guard let focusedID,
+              let engine = playback.engine(for: focusedID),
+              engine.duration > 0 else {
+            return
+        }
+        engine.seek(to: min(engine.duration, engine.position + engine.duration * 0.05))
+    }
+
+    private func toggleFocusedPlayback() {
+        guard let focusedID,
+              let engine = playback.engine(for: focusedID) else {
+            return
+        }
+        engine.isPlaying ? engine.pause() : engine.play()
+    }
+
+    private func setTemporaryAcceleration(_ accelerated: Bool) {
+        if accelerated {
+            guard let focusedID,
+                  let engine = playback.engine(for: focusedID),
+                  engine.isPlaying else {
+                return
+            }
+            acceleratedEngine?.setPlaybackRate(1)
+            acceleratedEngine = engine
+            engine.setPlaybackRate(2)
+            withAnimation(.easeOut(duration: 0.14)) {
+                isTemporarilyAccelerated = true
+            }
+        } else {
+            restoreNormalPlaybackRate()
+        }
+    }
+
+    private func restoreNormalPlaybackRate() {
+        acceleratedEngine?.setPlaybackRate(1)
+        acceleratedEngine = nil
+        withAnimation(.easeOut(duration: 0.14)) {
+            isTemporarilyAccelerated = false
+        }
+    }
+}
+
+@MainActor
+private final class FeedKeyboardMonitor: NSObject {
+    static let shared = FeedKeyboardMonitor()
+
+    private var activeToken: UUID?
+    private var shortRightArrowPress: (@MainActor () -> Void)?
+    private var longRightArrowPressChanged: (@MainActor (Bool) -> Void)?
+    private var togglePlayback: (@MainActor () -> Void)?
+    private var eventMonitor: Any?
+    private var isRightArrowPressed = false
+    private var isLongRightArrowPress = false
+
+    func activate(
+        token: UUID,
+        shortRightArrowPress: @escaping @MainActor () -> Void,
+        longRightArrowPressChanged: @escaping @MainActor (Bool) -> Void,
+        togglePlayback: @escaping @MainActor () -> Void
+    ) {
+        if activeToken != token {
+            cancelPendingRightArrowPress()
+        }
+        activeToken = token
+        self.shortRightArrowPress = shortRightArrowPress
+        self.longRightArrowPressChanged = longRightArrowPressChanged
+        self.togglePlayback = togglePlayback
+
+        guard eventMonitor == nil else { return }
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) {
+            [weak self] event in
+            self?.handle(event) ?? event
+        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidResignActive),
+            name: NSApplication.didResignActiveNotification,
+            object: nil
+        )
+    }
+
+    func deactivate(token: UUID) {
+        guard activeToken == token else { return }
+        cancelPendingRightArrowPress()
+        activeToken = nil
+        shortRightArrowPress = nil
+        longRightArrowPressChanged = nil
+        togglePlayback = nil
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
+            self.eventMonitor = nil
+        }
+        NotificationCenter.default.removeObserver(self)
+    }
+
+    private func handle(_ event: NSEvent) -> NSEvent? {
+        guard activeToken != nil else { return event }
+
+        // Once the initial right-arrow key-down is accepted, SwipeFlow owns
+        // every auto-repeat and key-up event until that physical press ends.
+        if event.keyCode == 124, isRightArrowPressed {
+            if event.type == .keyUp {
+                finishRightArrowPress()
+            }
+            return nil
+        }
+
+        let conflictingModifiers: NSEvent.ModifierFlags = [
+            .command,
+            .control,
+            .option,
+            .shift,
+        ]
+        guard event.modifierFlags.intersection(conflictingModifiers).isEmpty,
+              !isEditingText(in: event.window) else {
+            return event
+        }
+
+        if event.keyCode == 49 {
+            if event.type == .keyDown, !event.isARepeat {
+                togglePlayback?()
+            }
+            return nil
+        }
+
+        guard event.keyCode == 124 else { return event }
+        if event.type == .keyDown {
+            guard !event.isARepeat else { return nil }
+            isRightArrowPressed = true
+            isLongRightArrowPress = false
+            perform(#selector(beginLongRightArrowPress), with: nil, afterDelay: 0.35)
+            return nil
+        }
+
+        return event.type == .keyUp ? nil : event
+    }
+
+    private func finishRightArrowPress() {
+        NSObject.cancelPreviousPerformRequests(
+            withTarget: self,
+            selector: #selector(beginLongRightArrowPress),
+            object: nil
+        )
+        if isLongRightArrowPress {
+            longRightArrowPressChanged?(false)
+        } else {
+            shortRightArrowPress?()
+        }
+        isRightArrowPressed = false
+        isLongRightArrowPress = false
+    }
+
+    @objc private func beginLongRightArrowPress() {
+        guard isRightArrowPressed, !isLongRightArrowPress else { return }
+        isLongRightArrowPress = true
+        longRightArrowPressChanged?(true)
+    }
+
+    @objc private func applicationDidResignActive() {
+        cancelPendingRightArrowPress()
+    }
+
+    private func cancelPendingRightArrowPress() {
+        NSObject.cancelPreviousPerformRequests(
+            withTarget: self,
+            selector: #selector(beginLongRightArrowPress),
+            object: nil
+        )
+        if isLongRightArrowPress {
+            longRightArrowPressChanged?(false)
+        }
+        isRightArrowPressed = false
+        isLongRightArrowPress = false
+    }
+
+    private func isEditingText(in window: NSWindow?) -> Bool {
+        guard let responder = window?.firstResponder else { return false }
+        return responder is NSTextView || responder is NSTextField
+    }
 }
 
 private struct FeedPage: View {
@@ -161,6 +394,9 @@ private struct FeedPage: View {
     let preparationFailure: PlaybackPreparationFailure?
     let retention: RetentionState?
     let isFavorite: Bool
+    let isMuted: Bool
+    let isTemporarilyAccelerated: Bool
+    let setMuted: (Bool) -> Void
     let review: (MediaReviewChoice) -> Void
     let retry: () -> Void
 
@@ -197,6 +433,19 @@ private struct FeedPage: View {
                             .allowsHitTesting(false)
                     }
                     .shadow(color: .black.opacity(0.4), radius: 30)
+                    .overlay(alignment: .top) {
+                        if isFocused && isTemporarilyAccelerated {
+                            Label("2×", systemImage: "forward.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white.opacity(0.92))
+                                .padding(.horizontal, 10)
+                                .frame(height: 28)
+                                .modifier(PlaybackGlassModifier(cornerRadius: 10))
+                                .padding(.top, 12)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                                .allowsHitTesting(false)
+                        }
+                    }
                     .overlay(alignment: .topLeading) {
                         ZStack(alignment: .topLeading) {
                             // A nearly invisible fill keeps this hover target active
@@ -270,16 +519,23 @@ private struct FeedPage: View {
                             .offset(y: 18)
                         }
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                     if isFocused {
                         if let engine {
-                            PlaybackControls(
-                                engine: engine,
-                                retry: retry,
-                                showDiagnostics: { showingPlaybackDiagnostics = true }
-                            )
-                            .frame(maxWidth: .infinity)
+                            HStack(spacing: 8) {
+                                PlaybackControls(
+                                    engine: engine,
+                                    retry: retry,
+                                    showDiagnostics: { showingPlaybackDiagnostics = true }
+                                )
+                                .frame(maxWidth: .infinity)
+
+                                AudioToggleControl(
+                                    isMuted: isMuted,
+                                    setMuted: setMuted
+                                )
+                            }
                         } else {
                             PlaybackUnavailableControls(
                                 failure: preparationFailure,
@@ -461,25 +717,16 @@ private struct PlaybackControls: View {
                             .frame(width: 26, height: 24)
                             .background(.white.opacity(0.13), in: Circle())
                     }
-                    .keyboardShortcut(.space, modifiers: [])
                     .disabled(!canControlPlayback)
+                    .help("播放或暂停（空格）")
 
                     Button {
                         engine.seek(to: min(maximumDuration, engine.position + maximumDuration * 0.05))
                     } label: {
                         Image(systemName: "forward.fill")
                     }
-                    .keyboardShortcut(.rightArrow, modifiers: [])
                     .disabled(!canControlPlayback)
-                    .help("前进视频时长的 5%（→）")
-
-                    Button {
-                        engine.setMuted(!engine.isMuted)
-                    } label: {
-                        Image(systemName: engine.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                    }
-                    .keyboardShortcut("m", modifiers: [])
-                    .help(engine.isMuted ? "打开声音" : "静音")
+                    .help("短按 → 前进 5%；按住 → 2× 播放")
 
                     Spacer()
 
@@ -545,6 +792,37 @@ private struct PlaybackControls: View {
             return String(format: "%d:%02d:%02d", hours, minutes, remainder)
         }
         return String(format: "%d:%02d", minutes, remainder)
+    }
+}
+
+private struct AudioToggleControl: View {
+    let isMuted: Bool
+    let setMuted: (Bool) -> Void
+
+    var body: some View {
+        Button {
+            setMuted(!isMuted)
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                    .font(.callout.weight(.semibold))
+                Text(isMuted ? "静音" : "有声")
+                    .font(.caption2.weight(.semibold))
+            }
+            .frame(width: 62, height: 48)
+            .foregroundStyle(isMuted ? .white.opacity(0.78) : .cyan)
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut("m", modifiers: [])
+        .help(isMuted ? "打开声音（M）" : "静音（M）")
+        .modifier(PlaybackGlassModifier(cornerRadius: 14))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(.white.opacity(0.14), lineWidth: 0.5)
+                .allowsHitTesting(false)
+        }
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+        .frame(height: 66)
     }
 }
 

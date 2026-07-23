@@ -83,6 +83,46 @@ final class MPVPlaybackEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testMutedStatePersistsWhenReplacingMedia() async throws {
+        let mediaURL = try makeSilentWAV()
+        defer { try? FileManager.default.removeItem(at: mediaURL) }
+
+        let engine = try MPVPlaybackEngine(
+            configuration: MPVConfiguration(videoOutput: .headless)
+        )
+        let resource = PlaybackResource(url: mediaURL)
+
+        try await engine.load(resource)
+        XCTAssertTrue(engine.isMuted)
+
+        engine.setMuted(false)
+        let didUnmute = await waitUntil { !engine.isMuted }
+        XCTAssertTrue(didUnmute)
+
+        try await engine.load(resource)
+        XCTAssertFalse(engine.isMuted)
+    }
+
+    @MainActor
+    func testTemporaryPlaybackRateCanReturnToNormal() async throws {
+        let mediaURL = try makeSilentWAV()
+        defer { try? FileManager.default.removeItem(at: mediaURL) }
+
+        let engine = try MPVPlaybackEngine(
+            configuration: MPVConfiguration(videoOutput: .headless)
+        )
+        try await engine.load(PlaybackResource(url: mediaURL))
+
+        engine.setPlaybackRate(2)
+        let didAccelerate = await waitUntil { engine.playbackRate == 2 }
+        XCTAssertTrue(didAccelerate)
+
+        engine.setPlaybackRate(1)
+        let didRestore = await waitUntil { engine.playbackRate == 1 }
+        XCTAssertTrue(didRestore)
+    }
+
+    @MainActor
     func testRenderContextCreatedBeforeLoadProducesVideoPixels() async throws {
         let mediaURL = try makeColorY4M()
         defer { try? FileManager.default.removeItem(at: mediaURL) }

@@ -32,7 +32,7 @@ enum VidpickConnectionStatus: Equatable {
     case needsAttention
 }
 
-enum MediaReviewChoice: Sendable {
+enum MediaReviewChoice: Equatable, Sendable {
     case favorite
     case reviewForDeletion
 }
@@ -249,12 +249,14 @@ final class SourceBrowserModel: ObservableObject {
             return false
         }
 
+        let isRemovingDeletion = choice == .reviewForDeletion
+            && retentionByReference[item.reference] == .reviewForDeletion
         let action: MediaAction
         switch choice {
         case .favorite:
             action = .setFavorite(!favoriteReferences.contains(item.reference))
         case .reviewForDeletion:
-            action = .stageDeletion
+            action = isRemovingDeletion ? .restoreFromStagedDeletion : .stageDeletion
         }
 
         switch choice {
@@ -267,8 +269,13 @@ final class SourceBrowserModel: ObservableObject {
                 message = "已加入喜欢“\(item.title)”。"
             }
         case .reviewForDeletion:
-            retentionByReference[item.reference] = .reviewForDeletion
-            message = "已将“\(item.title)”加入待删除，删除前仍可撤销。"
+            if isRemovingDeletion {
+                retentionByReference[item.reference] = .undecided
+                message = "已从待删除清单撤回“\(item.title)”。"
+            } else {
+                retentionByReference[item.reference] = .reviewForDeletion
+                message = "已将“\(item.title)”加入待删除，删除前仍可撤销。"
+            }
         }
         updateVidpickReviewSnapshotIfNeeded()
 
@@ -356,10 +363,8 @@ final class SourceBrowserModel: ObservableObject {
                 VidpickLocalReviewState(
                     profile: profile,
                     retention: Dictionary(
-                        uniqueKeysWithValues: vidpickReviewSnapshot.retention.compactMap {
-                            $0.value == .reviewForDeletion
-                                ? ($0.key.rawValue, "delete")
-                                : nil
+                        uniqueKeysWithValues: vidpickReviewSnapshot.retention.map {
+                            ($0.key.rawValue, $0.value == .reviewForDeletion ? "delete" : "clear")
                         }
                     ),
                     favorites: vidpickReviewSnapshot.favorites.map(\.rawValue)
@@ -380,8 +385,14 @@ final class SourceBrowserModel: ObservableObject {
             )
         }
         for (path, value) in local.retention {
-            guard value == "delete" else { continue }
-            retention[MediaItemID(rawValue: path)] = .reviewForDeletion
+            switch value {
+            case "delete":
+                retention[MediaItemID(rawValue: path)] = .reviewForDeletion
+            case "clear":
+                retention[MediaItemID(rawValue: path)] = .undecided
+            default:
+                continue
+            }
         }
         return VidpickReviewSnapshot(
             retention: retention,
@@ -424,6 +435,7 @@ struct SourceBrowserView: View {
     @State private var showingDirectorySelection = false
     @State private var filterText = ""
     @State private var selectedDirectory = "/"
+    @State private var isFavoritePlaylistActive = false
     @State private var isShuffleEnabled = false
     @State private var shuffledReferences: [MediaReference] = []
 
@@ -511,6 +523,61 @@ struct SourceBrowserView: View {
                     .help(selectedDirectory == "/" ? "全部目录" : selectedDirectory)
                 }
 
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("播放列表")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        playFavoritesShuffled()
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "heart.fill")
+                                .foregroundStyle(.yellow)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("随机播放我的喜欢")
+                                    .font(.callout.weight(.semibold))
+                                Text("\(model.favoriteCount) 个视频")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Image(systemName: isFavoritePlaylistActive ? "checkmark" : "shuffle")
+                                .foregroundStyle(isFavoritePlaylistActive ? .yellow : .secondary)
+                        }
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                        .background(
+                            isFavoritePlaylistActive
+                                ? Color.yellow.opacity(0.14)
+                                : Color.secondary.opacity(0.08),
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(
+                                    isFavoritePlaylistActive
+                                        ? Color.yellow.opacity(0.45)
+                                        : Color.secondary.opacity(0.16),
+                                    lineWidth: 0.75
+                                )
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(model.favoriteCount == 0)
+
+                    if isFavoritePlaylistActive {
+                        Button("返回全部视频") {
+                            isFavoritePlaylistActive = false
+                            filterText = ""
+                            selectedDirectory = "/"
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text("播放选项")
                         .font(.caption.weight(.semibold))
@@ -529,7 +596,7 @@ struct SourceBrowserView: View {
                     }
 
                     HStack {
-                        Text("显示 \(displayedItems.count) / \(model.items.count) 项")
+                        Text("显示 \(displayedItems.count) / \(playbackScopeCount) 项")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
@@ -625,11 +692,21 @@ struct SourceBrowserView: View {
                 )
             } else if displayedItems.isEmpty {
                 ContentUnavailableView {
-                    Label("没有匹配的视频", systemImage: "line.3.horizontal.decrease.circle")
+                    Label(
+                        isFavoritePlaylistActive ? "还没有可播放的喜欢视频" : "没有匹配的视频",
+                        systemImage: isFavoritePlaylistActive
+                            ? "heart.slash"
+                            : "line.3.horizontal.decrease.circle"
+                    )
                 } description: {
-                    Text("没有标题或文件名符合“\(filterText)”的媒体。")
+                    if isFavoritePlaylistActive {
+                        Text("退出喜欢播放列表后可以继续浏览全部视频。")
+                    } else {
+                        Text("没有标题或文件名符合“\(filterText)”的媒体。")
+                    }
                 } actions: {
-                    Button("清除筛选并显示全部目录") {
+                    Button(isFavoritePlaylistActive ? "返回全部视频" : "清除筛选并显示全部目录") {
+                        isFavoritePlaylistActive = false
                         filterText = ""
                         selectedDirectory = "/"
                     }
@@ -691,7 +768,13 @@ struct SourceBrowserView: View {
         .sheet(isPresented: $showingDirectorySelection) {
             DirectorySelectionView(
                 directories: directoryOptions,
-                selection: $selectedDirectory
+                selection: Binding(
+                    get: { selectedDirectory },
+                    set: { directory in
+                        selectedDirectory = directory
+                        isFavoritePlaylistActive = false
+                    }
+                )
             )
         }
         .task {
@@ -714,11 +797,23 @@ struct SourceBrowserView: View {
                 shuffledReferences = []
             }
         }
+        .onChange(of: model.favoriteReferences) { _, favorites in
+            if isFavoritePlaylistActive {
+                if favorites.isEmpty {
+                    isFavoritePlaylistActive = false
+                } else {
+                    shuffledReferences = favorites.shuffled()
+                }
+            }
+        }
     }
 
     private var filteredItems: [MediaItem] {
         let query = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
-        return directoryFilteredItems.filter { item in
+        let candidates = isFavoritePlaylistActive
+            ? model.items.filter { model.favoriteReferences.contains($0.reference) }
+            : directoryFilteredItems
+        return candidates.filter { item in
             guard !query.isEmpty else { return true }
             return item.title.localizedCaseInsensitiveContains(query)
                 || (item.detailText?.localizedCaseInsensitiveContains(query) ?? false)
@@ -765,6 +860,10 @@ struct SourceBrowserView: View {
         }
     }
 
+    private var playbackScopeCount: Int {
+        isFavoritePlaylistActive ? model.favoriteCount : model.items.count
+    }
+
     @ViewBuilder
     private func sourceButton(for kind: SourceKind) -> some View {
         Button {
@@ -779,6 +878,15 @@ struct SourceBrowserView: View {
 
     private func reshuffle() {
         shuffledReferences = model.items.map(\.reference).shuffled()
+    }
+
+    private func playFavoritesShuffled() {
+        guard model.favoriteCount > 0 else { return }
+        isFavoritePlaylistActive = true
+        selectedDirectory = "/"
+        filterText = ""
+        isShuffleEnabled = true
+        shuffledReferences = model.favoriteReferences.shuffled()
     }
 
     private func parentDirectory(of item: MediaItem) -> String {

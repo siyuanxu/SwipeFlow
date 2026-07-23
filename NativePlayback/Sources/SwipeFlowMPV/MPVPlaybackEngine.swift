@@ -10,6 +10,7 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
     @Published public private(set) var position: TimeInterval = 0
     @Published public private(set) var duration: TimeInterval = 0
     @Published public private(set) var isMuted: Bool
+    @Published public private(set) var playbackRate: Double = 1
     @Published public private(set) var diagnostics = MPVPlaybackDiagnostics()
 
     private let client: MPVClient
@@ -20,13 +21,16 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
     private var progressTask: Task<Void, Never>?
     private var diagnosticRefreshCounter = 0
     private var loadGeneration = 0
-    private let startsMuted: Bool
+    private let defaultAudioDeviceDidChange: @MainActor @Sendable () -> Void
     private let localLoadTimeout: TimeInterval
     private let remoteLoadTimeout: TimeInterval
     private var audioDeviceListener: DefaultAudioDeviceListener?
 
-    public init(configuration: MPVConfiguration = MPVConfiguration()) throws {
-        startsMuted = configuration.startMuted
+    public init(
+        configuration: MPVConfiguration = MPVConfiguration(),
+        defaultAudioDeviceDidChange: @escaping @MainActor @Sendable () -> Void = {}
+    ) throws {
+        self.defaultAudioDeviceDidChange = defaultAudioDeviceDidChange
         localLoadTimeout = configuration.localLoadTimeout
         remoteLoadTimeout = configuration.remoteLoadTimeout
         isMuted = configuration.startMuted
@@ -72,8 +76,9 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
         diagnostics.loadTimeout = loadTimeout
         state = .loading
         do {
-            isMuted = startsMuted
-            try await client.command(["set", "mute", startsMuted ? "yes" : "no"])
+            try await client.command(["set", "mute", isMuted ? "yes" : "no"])
+            try await client.command(["set", "speed", "1"])
+            playbackRate = 1
             try await client.command(["set", "pause", "yes"])
             await client.discardPendingEvents()
             try await client.command(["loadfile", playbackLocation(for: resource.url), "replace"])
@@ -131,6 +136,13 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
         }
     }
 
+    public func setPlaybackRate(_ rate: Double) {
+        let safeRate = min(max(rate, 0.25), 4)
+        schedule(["set", "speed", String(safeRate)]) { [weak self] in
+            self?.playbackRate = safeRate
+        }
+    }
+
     public func unload() {
         loadGeneration &+= 1
         progressTask?.cancel()
@@ -140,6 +152,7 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
             lastPosition = 0
             position = 0
             duration = 0
+            playbackRate = 1
             diagnostics = MPVPlaybackDiagnostics()
             state = .idle
         }
@@ -312,7 +325,9 @@ public final class MPVPlaybackEngine: ObservableObject, PlaybackEngine {
     private func installAudioDeviceChangeListener() {
         audioDeviceListener = DefaultAudioDeviceListener { [weak self] in
             Task { @MainActor [weak self] in
-                self?.setMuted(true)
+                guard let self else { return }
+                self.setMuted(true)
+                self.defaultAudioDeviceDidChange()
             }
         }
     }
